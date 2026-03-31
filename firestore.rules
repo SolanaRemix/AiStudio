@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - xp: number (required)
+    //   - score: number (required)
+    //   - balance: number (required)
+    //   - level: number (required)
+    //   - nextLevelXp: number (required)
+    //   - settings: map (optional)
+    //
+    // Collection: users/{uid}/bulk_generations
+    // Document ID: {id}
+    // Fields:
+    //   - id: string (required)
+    //   - uid: string (required)
+    //   - key: string (required)
+    //   - status: string (required)
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "businesbook.com@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUserProfile(data) {
+      return hasRequiredFields(['uid', 'xp', 'score', 'balance', 'level', 'nextLevelXp']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.xp is number && data.xp >= 0 &&
+             data.score is number && data.score >= 0 &&
+             data.balance is number &&
+             data.level is number && data.level >= 0 &&
+             data.nextLevelXp is number && data.nextLevelXp >= 0 &&
+             (!('settings' in data) || data.settings is map);
+    }
+
+    function isValidBulkGeneration(data) {
+      return hasRequiredFields(['id', 'uid', 'key', 'status', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.key is string && data.key.size() > 0 &&
+             data.status is string && data.status.size() > 0 &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if (isOwner(userId) && isValidUserProfile(request.resource.data)) || isAdmin();
+
+      match /bulk_generations/{genId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidBulkGeneration(request.resource.data);
+        allow update: if (isOwner(userId) && isValidBulkGeneration(request.resource.data)) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}

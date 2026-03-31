@@ -1,0 +1,5 @@
+{
+  "name": "Flashlons AI: The Neural Trading Grid",
+  "description": "Professional-grade AI automated trading platform. Real-time signals, neural arbitrage, and automated bot execution on the Solana blockchain.",
+  "requestFramePermissions": ["geolocation"]
+}

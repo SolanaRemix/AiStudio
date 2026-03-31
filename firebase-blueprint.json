@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user statistics and settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "xp": { "type": "number", "description": "Experience points." },
+        "score": { "type": "number", "description": "User score." },
+        "balance": { "type": "number", "description": "User balance." },
+        "level": { "type": "number", "description": "User level." },
+        "nextLevelXp": { "type": "number", "description": "XP required for the next level." },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "neuralIdentity": { "type": "string" },
+            "neuralAlerts": { "type": "string" },
+            "gridRegion": { "type": "string" },
+            "neuralAccess": { "type": "string" },
+            "twoFactor": { "type": "string" },
+            "apiAccess": { "type": "string" },
+            "privacyProtocol": { "type": "string" }
+          }
+        }
+      },
+      "required": ["uid", "xp", "score", "balance", "level", "nextLevelXp"]
+    },
+    "BulkGeneration": {
+      "title": "Bulk Generation",
+      "description": "Stores a single neural key generation record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string", "description": "The user who owns this generation." },
+        "key": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "key", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "/users/{uid}/bulk_generations/{id}": {
+      "schema": "BulkGeneration",
+      "description": "Bulk generation records for a user."
+    }
+  }
+}
